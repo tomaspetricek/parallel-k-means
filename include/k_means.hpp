@@ -11,51 +11,22 @@
 namespace mcc::clustering {
 
     // inspired: https://towardsdatascience.com/k-means-clustering-algorithm-applications-evaluation-methods-and-drawbacks-aa03e644b48a
-    template<std::size_t n_features, std::size_t n_clusters, std::size_t n_samples>
+    template<std::size_t n_samples, std::size_t n_features, std::size_t n_clusters>
     class k_means {
         static_assert(n_samples>=n_clusters);
+        std::size_t n_iter_{0};
 
-        void initialize_centroids(const double (& samples)[n_samples][n_features],
-                double (& centroids)[n_clusters][n_features]) const
-        {
-            std::size_t indices[n_samples];
-
-            for (std::size_t i{0}; i<n_samples; i++)
-                indices[i] = i;
-
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::shuffle(&indices[0], &indices[n_samples-1], gen);
-
-            std::size_t s;
-            for (std::size_t c{0}; c<n_clusters; c++) {
-                s = indices[c];
-                std::copy(&samples[s][0], &samples[s][0]+n_features, &centroids[c][0]);
-            }
-        }
-
+    protected:
         void compute_distances(const double (& centroids)[n_clusters][n_features],
                 const double (& samples)[n_samples][n_features],
                 double (& dists)[n_samples][n_clusters]) const
         {
-            double sum;
-            double diff;
-
-            for (std::size_t s{0}; s<n_samples; s++) {
-                for (std::size_t c{0}; c<n_clusters; c++) {
-                    sum = 0;
-
-                    for (std::size_t f{0}; f<n_features; f++) {
-                        diff = centroids[c][f]-samples[s][f];
-                        sum += diff*diff;
-                    }
-
-                    dists[s][c] = std::sqrt(sum);
-                }
-            }
+            for (std::size_t s{0}; s<n_samples; s++)
+                for (std::size_t c{0}; c<n_clusters; c++)
+                    dists[s][c] = euclidean_distance(centroids[c], samples[s]);
         }
 
-        void find_closest(const double (& dists)[n_samples][n_clusters], std::size_t (& labels)[n_samples]) const
+        void label_samples(const double (& dists)[n_samples][n_clusters], std::size_t (& labels)[n_samples]) const
         {
             double min;
             std::size_t min_idx;
@@ -79,7 +50,7 @@ namespace mcc::clustering {
         {
             // initialize to zero
             double sums[n_clusters][n_features] = {0};
-            double counts[n_features] = {0};
+            double counts[n_clusters] = {0};
             std::size_t c;
 
             for (std::size_t s{0}; s<n_samples; s++) {
@@ -103,7 +74,7 @@ namespace mcc::clustering {
         void operator()(const double (& samples)[n_samples][n_features], std::size_t (& labels)[n_samples],
                 double (& centroids)[n_clusters][n_features])
         {
-            initialize_centroids(samples, centroids);
+            // initialize_centroids(centroids);
 
             // prepare
             double prev_centroids[n_clusters][n_features];
@@ -111,12 +82,18 @@ namespace mcc::clustering {
 
             // fit
             do {
-                std::copy(&centroids[0][0], &centroids[0][0]+n_clusters*n_features, &prev_centroids[0][0]);
+                copy(centroids, prev_centroids);
                 compute_distances(centroids, samples, dists);
-                find_closest(dists, labels);
+                label_samples(dists, labels);
                 compute_centroids(samples, labels, centroids);
+                n_iter_++;
             }
             while (!are_equal(prev_centroids, centroids));
+        }
+
+        size_t n_iter() const
+        {
+            return n_iter_;
         }
     };
 }

@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <utility>
 
 namespace mcc::csv {
     class reader final {
@@ -17,8 +18,8 @@ namespace mcc::csv {
         std::string line_;
 
     public:
-        explicit reader(const std::filesystem::path& path, char delim)
-                :path_(path), delim_(delim)
+        explicit reader(std::filesystem::path  path, char delim)
+                :path_(std::move(path)), delim_(delim)
         {
             if (!std::filesystem::exists(path_))
                 throw std::invalid_argument("File does not exist");
