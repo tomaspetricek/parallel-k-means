@@ -13,45 +13,35 @@ class fixture : public mcc::clustering::k_means<n_samples, n_features, n_cluster
 };
 
 BOOST_FIXTURE_TEST_SUITE(k_means_tests, fixture)
-    BOOST_AUTO_TEST_CASE(label_samples_test)
-    {
-        // prepare
+
+    BOOST_AUTO_TEST_CASE(k_means_test) {
         double samples[n_samples][n_features];
-        double actual_centroids[n_clusters][n_features];
+        double actual_dists[n_samples][n_clusters], expect_dists[n_samples][n_clusters];
         std::size_t actual_labels[n_samples], expect_labels[n_samples];
-
-        // read
-        char delim{','};
-        std::filesystem::path data_dir{"../../data/test"};
-        mcc::read_csv(data_dir/"samples.csv", delim, samples);
-        mcc::read_csv(data_dir/"labels.csv", delim, actual_labels);
-        mcc::read_csv(data_dir/"centers.csv", delim, actual_centroids);
-
-        double dists[n_samples][n_clusters];
-        compute_distances(actual_centroids, samples, dists);
-        label_samples(dists, expect_labels);
-        BOOST_TEST(mcc::are_equal(actual_labels, expect_labels));
-    }
-
-    BOOST_AUTO_TEST_CASE(compute_centroids_test)
-    {
-        // prepare
-        double samples[n_samples][n_features];
         double actual_centroids[n_clusters][n_features], expect_centroids[n_clusters][n_features];
-        std::size_t actual_labels[n_samples];
 
         // read
         char delim{','};
         std::filesystem::path data_dir{"../../data/test"};
         mcc::read_csv(data_dir/"samples.csv", delim, samples);
         mcc::read_csv(data_dir/"labels.csv", delim, actual_labels);
-        mcc::read_csv(data_dir/"centers.csv", delim, actual_centroids);
+        mcc::read_csv(data_dir/"centroids.csv", delim, actual_centroids);
+        mcc::read_csv(data_dir/"distances.csv", delim, actual_dists);
 
-        compute_centroids(samples, actual_labels, expect_centroids);
+        double tolerance{0.0000001};
 
+        compute_distances(actual_centroids, samples, expect_dists);
         for (std::size_t c{0}; c<n_clusters; c++)
             for (std::size_t f{0}; f<n_features; f++)
-                BOOST_REQUIRE_CLOSE(actual_centroids[c][f], expect_centroids[c][f], 5);
+                BOOST_REQUIRE_CLOSE(actual_dists[c][f], expect_dists[c][f], tolerance);
+
+        label_samples(actual_dists, expect_labels);
+        BOOST_TEST(mcc::are_equal(actual_labels, expect_labels));
+
+        compute_centroids(samples, actual_labels, expect_centroids);
+        for (std::size_t c{0}; c<n_clusters; c++)
+            for (std::size_t f{0}; f<n_features; f++)
+                BOOST_REQUIRE_CLOSE(actual_centroids[c][f], expect_centroids[c][f], tolerance);
     }
 BOOST_AUTO_TEST_SUITE_END()
 
