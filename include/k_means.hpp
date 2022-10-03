@@ -15,8 +15,20 @@ namespace mcc::clustering {
     class k_means {
         static_assert(n_samples>=n_clusters);
         std::size_t n_iter_{0};
+        std::mt19937 rand_gen_;
+        std::uniform_int_distribution<int> sampler_;
 
     protected:
+        void initialize_centroids(const double (& samples)[n_samples][n_features],
+                double (& centroids)[n_clusters][n_features])
+        {
+            std::size_t s;
+            for (std::size_t c{0}; c<n_clusters; c++) {
+                s = sampler_(rand_gen_);
+                std::copy(&samples[s][0], &samples[s][0]+n_features, &centroids[c][0]);
+            }
+        }
+
         void compute_distances(const double (& centroids)[n_clusters][n_features],
                 const double (& samples)[n_samples][n_features],
                 double (& dists)[n_samples][n_clusters]) const
@@ -46,7 +58,7 @@ namespace mcc::clustering {
         }
 
         void compute_centroids(const double (& samples)[n_samples][n_features], const std::size_t (& labels)[n_samples],
-                double (& centroids)[n_clusters][n_features]) const
+                double (& centroids)[n_clusters][n_features])
         {
             // initialize to zero
             double sums[n_clusters][n_features] = {0};
@@ -63,18 +75,29 @@ namespace mcc::clustering {
             }
 
             // mean
-            for (c = 0; c<n_clusters; c++)
-                for (std::size_t f{0}; f<n_features; f++) {
-                    assert(sums[c][f]);
-                    centroids[c][f] = sums[c][f]/counts[c];
+            std::size_t s;
+            for (c = 0; c<n_clusters; c++) {
+                // src: https://stackoverflow.com/questions/11075272/k-means-empty-cluster
+                if (sums[c][0]) {
+                    for (std::size_t f{0}; f<n_features; f++)
+                        centroids[c][f] = sums[c][f]/counts[c];
                 }
+                // empty -> replace with random sample
+                else {
+                    s = sampler_(rand_gen_);
+                    std::copy(&samples[s][0], &samples[s][0]+n_features, &centroids[c][0]);
+                }
+            }
         }
 
     public:
+        explicit k_means()
+                :rand_gen_(std::random_device{}()), sampler_(0, n_samples-1) { }
+
         void operator()(const double (& samples)[n_samples][n_features], std::size_t (& labels)[n_samples],
                 double (& centroids)[n_clusters][n_features])
         {
-            // initialize_centroids(centroids);
+            initialize_centroids(samples, centroids);
 
             // prepare
             double prev_centroids[n_clusters][n_features];
@@ -82,7 +105,7 @@ namespace mcc::clustering {
 
             // fit
             do {
-                copy(centroids, prev_centroids);
+                mcc::copy(centroids, prev_centroids);
                 compute_distances(centroids, samples, dists);
                 label_samples(dists, labels);
                 compute_centroids(samples, labels, centroids);
