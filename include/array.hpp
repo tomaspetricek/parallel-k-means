@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <reader.hpp>
+#include <writer.hpp>
 
 namespace mcc {
     template<class Type, size_t n>
@@ -32,6 +33,12 @@ namespace mcc {
     inline void copy(const Type (& from)[n_rows][n_cols], Type (& to)[n_rows][n_cols])
     {
         std::copy(&from[0][0], &from[0][0]+n_rows*n_cols, &to[0][0]);
+    }
+
+    template<class Type, std::size_t n>
+    inline void copy(const Type (& from)[n], Type (& to)[n])
+    {
+        std::copy(&from[0], &from[0]+n, &to[0]);
     }
 
     template<class Type, size_t n>
@@ -86,6 +93,20 @@ namespace mcc {
         for (std::size_t r{0}; r<n; r++) {
             reader(data);
             arr[r] = std::stod(data[0]);
+        }
+    }
+
+    template<class Type, std::size_t n_rows, std::size_t n_cols>
+    inline void write_csv(const std::filesystem::path& path, char delim, const Type (& mat)[n_rows][n_cols])
+    {
+        mcc::csv::writer writer{path, delim};
+        std::string data[n_cols];
+
+        for (std::size_t r{0}; r<n_rows; r++) {
+            for (std::size_t c{0}; c<n_cols; c++)
+                data[c] = std::to_string(mat[r][c]);
+
+            writer(data);
         }
     }
 }

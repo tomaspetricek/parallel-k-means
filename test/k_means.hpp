@@ -8,7 +8,7 @@
 #include <boost/test/unit_test.hpp>
 #include <k_means.hpp>
 
-constexpr std::size_t n_samples{2000}, n_features{2}, n_clusters{3};
+constexpr std::size_t n_samples{2'000}, n_features{2}, n_clusters{3};
 class fixture : public mcc::clustering::k_means<n_samples, n_features, n_clusters> {
 };
 
@@ -29,13 +29,11 @@ BOOST_FIXTURE_TEST_SUITE(k_means_tests, fixture)
         mcc::read_csv(data_dir/"distances.csv", delim, actual_dists);
 
         double tolerance{0.0000001};
+        int n_changed;
 
-        compute_distances(actual_centroids, samples, expect_dists);
-        for (std::size_t c{0}; c<n_clusters; c++)
-            for (std::size_t f{0}; f<n_features; f++)
-                BOOST_REQUIRE_CLOSE(actual_dists[c][f], expect_dists[c][f], tolerance);
-
-        label_samples(actual_dists, expect_labels);
+        mcc::copy(actual_labels, expect_labels);
+        assign_centroids(actual_centroids, samples, expect_labels, n_changed);
+        BOOST_TEST(!n_changed);
         BOOST_TEST(mcc::are_equal(actual_labels, expect_labels));
 
         compute_centroids(samples, actual_labels, expect_centroids);
