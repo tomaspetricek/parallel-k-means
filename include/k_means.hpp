@@ -8,6 +8,7 @@
 #include <cmath>
 #include <random>
 #include <array.hpp>
+#include <cassert>
 
 namespace mcc::clustering {
 
@@ -64,7 +65,7 @@ namespace mcc::clustering {
             // mean
             std::size_t s;
             for (c = 0; c<n_clusters; c++) {
-                assert(sums[c][0]);
+                // assert(sums[c][0]);
                 for (std::size_t f{0}; f<n_features; f++)
                     centroids[c][f] = sums[c][f]/counts[c];
             }

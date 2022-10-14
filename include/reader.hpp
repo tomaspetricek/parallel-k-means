@@ -35,9 +35,6 @@ namespace mcc::csv {
             // read lines
             std::getline(file_, line_);
 
-            // clean
-            line_.erase(std::remove(line_.begin(), line_.end(), '\r'), line_.end());
-
             // parse line
             std::stringstream ss(line_);
             ss.exceptions(std::ios::failbit);

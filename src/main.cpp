@@ -31,7 +31,7 @@ int main()
 
     // read
     char delim{','};
-    std::filesystem::path data_dir{"../../data"};
+    std::filesystem::path data_dir{"src/data"};
     mcc::read_csv(data_dir/"samples.csv", delim, samples);
     mcc::read_csv(data_dir/"labels.csv", delim, actual_labels);
     mcc::read_csv(data_dir/"init_centroids.csv", delim, centroids);

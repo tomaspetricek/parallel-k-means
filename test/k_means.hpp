@@ -22,7 +22,7 @@ BOOST_FIXTURE_TEST_SUITE(k_means_tests, fixture)
 
         // read
         char delim{','};
-        std::filesystem::path data_dir{"../../data/test"};
+        std::filesystem::path data_dir{"../../test/data"};
         mcc::read_csv(data_dir/"samples.csv", delim, samples);
         mcc::read_csv(data_dir/"labels.csv", delim, actual_labels);
         mcc::read_csv(data_dir/"centroids.csv", delim, actual_centroids);
