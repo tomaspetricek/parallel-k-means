@@ -9,6 +9,7 @@
 #include <random>
 #include <array.hpp>
 #include <cassert>
+#include <omp.h>
 
 namespace mcc::clustering {
 
@@ -27,7 +28,8 @@ namespace mcc::clustering {
             std::size_t min_idx;
             double dist, min_dist;
 
-            for (std::size_t s{0}; s<n_samples; s++) {
+            #pragma omp parallel for schedule(static) private(min_idx, dist, min_dist)
+            for (std::size_t s = 0; s<n_samples; s++) {
                 min_dist = euclidean_distance(centroids[0], samples[s]);
                 min_idx = 0;
 
@@ -40,7 +42,11 @@ namespace mcc::clustering {
                     }
                 }
 
-                if (labels[s]!=min_idx) n_changed++;
+                if (labels[s]!=min_idx) {
+                    #pragma omp atomic update
+                    n_changed++;
+                }
+
                 labels[s] = min_idx;
             }
         }
@@ -49,25 +55,46 @@ namespace mcc::clustering {
                 double (& centroids)[n_clusters][n_features])
         {
             // initialize to zero
-            double sums[n_clusters][n_features] = {0};
-            double counts[n_clusters] = {0};
+            const int n_threads{omp_get_max_threads()};
+            double sums[n_threads][n_clusters][n_features] = {0};
+            double counts[n_threads][n_clusters] = {0};
             std::size_t c;
 
-            for (std::size_t s{0}; s<n_samples; s++) {
-                c = labels[s];
+            omp_set_num_threads(n_threads);
 
-                for (std::size_t f{0}; f<n_features; f++)
-                    sums[c][f] += samples[s][f];
+            #pragma omp parallel private(c)
+            {
+                int id = omp_get_thread_num();
 
-                counts[c] += 1;
+                #pragma omp for schedule(static)
+                for (std::size_t s = 0; s<n_samples; s++) {
+                    c = labels[s];
+
+                    #pragma omp simd
+                    for (std::size_t f = 0; f<n_features; f++)
+                        sums[id][c][f] += samples[s][f];
+
+                    counts[id][c] += 1;
+                }
             }
 
             // mean
-            std::size_t s;
+            double sum, count;
+
+            #pragma omp for schedule(static)
             for (c = 0; c<n_clusters; c++) {
-                // assert(sums[c][0]);
-                for (std::size_t f{0}; f<n_features; f++)
-                    centroids[c][f] = sums[c][f]/counts[c];
+                for (std::size_t f = 0; f<n_features; f++) {
+                    sum = 0;
+                    count = 0;
+
+                    #pragma omp simd
+                    for (std::size_t id = 0; id<n_threads; id++) {
+                        sum += sums[id][c][f];
+                        count += counts[id][c];
+                    }
+
+                    centroids[c][f] = sum/count;
+                }
             }
         }
 
