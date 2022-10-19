@@ -6,6 +6,18 @@
 #include <array.hpp>
 #include <k_means.hpp>
 
+#ifndef N_SAMPLES
+#error Number of samples must be defined
+#endif
+
+#ifndef N_FEATURES
+#error Number of features must be defined
+#endif
+
+#ifndef N_CLUSTERS
+#error Number of clusters must be defined
+#endif
+
 template<std::size_t n_samples, std::size_t n_features, std::size_t n_clusters>
 void initialize_centroids(const double (& samples)[n_samples][n_features],
         double (& centroids)[n_clusters][n_features])
@@ -28,7 +40,7 @@ struct num_separator : public std::numpunct<CharType> {
 
 int main()
 {
-    constexpr std::size_t n_samples{10'000}, n_features{50}, n_clusters{10};
+    constexpr std::size_t n_samples{N_SAMPLES}, n_features{N_FEATURES}, n_clusters{N_CLUSTERS};
 
     // prepare
     double samples[n_samples][n_features];
