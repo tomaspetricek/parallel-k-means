@@ -22,9 +22,9 @@ namespace mcc::clustering {
     protected:
         void assign_centroids(const double (& centroids)[n_clusters][n_features],
                 const double (& samples)[n_samples][n_features], std::size_t (& labels)[n_samples],
-                int& n_changed) const
+                bool& changed) const
         {
-            n_changed = 0;
+            changed = false;
             std::size_t min_idx;
             double dist, min_dist;
 
@@ -42,10 +42,7 @@ namespace mcc::clustering {
                     }
                 }
 
-                if (labels[s]!=min_idx) {
-                    #pragma omp atomic update
-                    n_changed++;
-                }
+                if (labels[s]!=min_idx) changed = true;
 
                 labels[s] = min_idx;
             }
@@ -81,7 +78,7 @@ namespace mcc::clustering {
             // mean
             double sum, count;
 
-            #pragma omp for schedule(static)
+            #pragma omp for schedule(static) private(sum, count) // vyzkoušet s a bez
             for (c = 0; c<n_clusters; c++) {
                 for (std::size_t f = 0; f<n_features; f++) {
                     sum = 0;
@@ -102,18 +99,18 @@ namespace mcc::clustering {
         void operator()(const double (& samples)[n_samples][n_features], std::size_t (& labels)[n_samples],
                 double (& centroids)[n_clusters][n_features])
         {
-            int n_changed;
+            bool changed;
 
             // assign initial centroids
-            assign_centroids(centroids, samples, labels, n_changed);
+            assign_centroids(centroids, samples, labels, changed);
 
             // fit
             do {
                 compute_centroids(samples, labels, centroids);
-                assign_centroids(centroids, samples, labels, n_changed);
+                assign_centroids(centroids, samples, labels, changed);
                 n_iter_++;
             }
-            while (n_changed);
+            while (changed);
         }
 
         size_t n_iter() const

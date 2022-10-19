@@ -29,11 +29,11 @@ BOOST_FIXTURE_TEST_SUITE(k_means_tests, fixture)
         mcc::read_csv(data_dir/"distances.csv", delim, actual_dists);
 
         double tolerance{0.0000001};
-        int n_changed;
+        bool changed;
 
         mcc::copy(actual_labels, expect_labels);
-        assign_centroids(actual_centroids, samples, expect_labels, n_changed);
-        BOOST_TEST(!n_changed);
+        assign_centroids(actual_centroids, samples, expect_labels, changed);
+        BOOST_TEST(!changed);
         BOOST_TEST(mcc::are_equal(actual_labels, expect_labels));
 
         compute_centroids(samples, actual_labels, expect_centroids);
