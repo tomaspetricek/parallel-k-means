@@ -29,36 +29,50 @@ namespace mcc {
         return true;
     }
 
-    template<class Type, std::size_t n_rows, std::size_t n_cols>
-    inline void copy(const Type (& from)[n_rows][n_cols], Type (& to)[n_rows][n_cols])
+//    template<class Type, std::size_t n_rows, std::size_t n_cols>
+//    inline void copy(const Type (& from)[n_rows][n_cols], Type (& to)[n_rows][n_cols])
+//    {
+//        std::copy(&from[0][0], &from[0][0]+n_rows*n_cols, &to[0][0]);
+//    }
+
+    inline std::size_t index(std::size_t r, std::size_t c, std::size_t n_cols)
     {
-        std::copy(&from[0][0], &from[0][0]+n_rows*n_cols, &to[0][0]);
+        return r*n_cols+c;
     }
 
-    template<class Type, std::size_t n>
-    inline void copy(const Type (& from)[n], Type (& to)[n])
+    inline std::size_t index(std::size_t l, std::size_t r, std::size_t c, std::size_t n_rows, std::size_t n_cols)
     {
-        std::copy(&from[0], &from[0]+n, &to[0]);
+        return l*n_rows*n_cols+r*n_cols+c;
     }
 
-    template<class Type, size_t n>
-    inline void print(const Type (& arr)[n])
+    template<class Type>
+    inline void copy(const Type* from, Type* to, std::size_t n_cols)
+    {
+        for (std::size_t c{0}; c<n_cols; c++)
+            to[c] = from[c];
+    }
+
+    template<class Type>
+    inline void print(const Type* arr, std::size_t n)
     {
         for (size_t i{0}; i<n; i++)
             std::cout << arr[i] << ", ";
         std::cout << std::endl;
     }
 
-    template<class Type, std::size_t n_rows, std::size_t n_cols>
-    inline void print(const Type (& arr)[n_rows][n_cols])
+    template<class Type>
+    inline void print(const Type* arr, std::size_t n_rows, std::size_t n_cols)
     {
-        for (std::size_t r{0}; r<n_rows; r++)
-            print(arr[r]);
+        for (std::size_t r{0}; r<n_rows; r++) {
+            for (std::size_t c{0}; c<n_cols; c++)
+                std::cout << arr[index(r, c, n_cols)] << ", ";
+            std::cout << std::endl;
+        }
         std::cout << std::endl;
     }
 
-    template<class Type, std::size_t n>
-    inline double euclidean_distance(const Type (& x)[n], const Type (& y)[n])
+    template<class Type>
+    inline double euclidean_distance(const Type* x, const Type* y, std::size_t n)
     {
         double sum{0}, diff;
 
@@ -70,29 +84,32 @@ namespace mcc {
         return std::sqrt(sum);
     }
 
-    template<class Type, std::size_t n_rows, std::size_t n_cols>
-    inline void read_csv(const std::filesystem::path& path, char delim, Type (& mat)[n_rows][n_cols])
+    template<class Type>
+    inline void
+    read_csv(const std::filesystem::path& path, char delim, Type* mat, std::size_t n_rows, std::size_t n_cols)
     {
         mcc::csv::reader reader{path, delim};
-        std::string data[n_cols];
+        auto* data = new std::string[n_cols];
 
         for (std::size_t r{0}; r<n_rows; r++) {
-            reader(data);
+            reader(data, n_cols);
 
             for (std::size_t c{0}; c<n_cols; c++)
-                mat[r][c] = std::stod(data[c]);
+                mat[index(r, c, n_cols)] = std::stod(data[c]);
         }
+
+        delete[] data;
     }
 
-    template<class Type, std::size_t n>
-    inline void read_csv(const std::filesystem::path& path, char delim, Type (& arr)[n])
+    template<class Type>
+    inline void read_csv(const std::filesystem::path& path, char delim, Type* arr, std::size_t n)
     {
         mcc::csv::reader reader{path, delim};
-        std::string data[1];
+        auto data = std::string();
 
-        for (std::size_t r{0}; r<n; r++) {
-            reader(data);
-            arr[r] = std::stod(data[0]);
+        for (std::size_t i{0}; i<n; i++) {
+            reader(&data, 1);
+            arr[i] = std::stod(data);
         }
     }
 

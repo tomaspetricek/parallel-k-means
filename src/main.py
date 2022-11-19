@@ -1,6 +1,7 @@
 from sklearn.datasets import make_blobs
 import numpy as np
 import os
+import sys
 
 
 def compute_distances(samples, centroids):
@@ -54,11 +55,27 @@ def save_data(data, dir_path, data_dir_fmt):
         np.savetxt(os.path.join(data_dir_path, "centers.csv"), centers, delimiter=",")
 
 
+def compile_generate(dir_paths, compile_cmd_fmt):
+    pass
+
+
 def main():
-    data = generate_same_size_samples(1, 8, 10, 5_000)
-    src_data_dir_path = "data"
-    data_dir_fmt = "{n_samples}-{n_features}-{n_centers}"
-    save_data(data, src_data_dir_path, data_dir_fmt)
+    data_dir = "data"
+    dir_paths = [file.path for file in os.scandir(data_dir) if file.is_dir()]
+    compile_cmd_fmt = "/usr/local/bin/g++-12 -std=c++20 -O3 -march=native -fopenmp -Wall " \
+                      "-DN_SAMPLES={n_samples} -DN_FEATURES={n_features} -DN_CLUSTERS={n_clusters} " \
+                      "generate.cpp -I ../include -o {exec_path}"
+    exec_path_fmt = "exec/mcc-{n_samples}-{n_features}-{n_clusters}"
+
+    for dir_path in dir_paths:
+        sample_dirname = os.path.basename(dir_path)
+        dims = sample_dirname.split('-')
+        n_samples, n_features, n_clusters = tuple(map(int, dims))
+
+        exec_path = exec_path_fmt.format(n_samples=n_samples, n_features=n_features, n_clusters=n_clusters)
+        compile_cmd = compile_cmd_fmt.format(n_samples=n_samples, n_features=n_features, n_clusters=n_clusters,
+                                             exec_path=exec_path)
+        print(compile_cmd)
 
 
 if __name__ == "__main__":

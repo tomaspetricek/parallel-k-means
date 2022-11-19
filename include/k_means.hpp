@@ -14,27 +14,30 @@
 namespace mcc::clustering {
 
     // inspired: https://towardsdatascience.com/k-means-clustering-algorithm-applications-evaluation-methods-and-drawbacks-aa03e644b48a
-    template<std::size_t n_samples, std::size_t n_features, std::size_t n_clusters>
     class k_means {
-        static_assert(n_samples>=n_clusters);
+        std::size_t n_samples_;
+        std::size_t n_features_;
+        std::size_t n_clusters_;
+        std::size_t n_threads_;
+        double* sums_;
+        double* counts_;
         std::size_t n_iter_{0};
 
     protected:
-        void assign_centroids(const double (& centroids)[n_clusters][n_features],
-                const double (& samples)[n_samples][n_features], std::size_t (& labels)[n_samples],
-                bool& changed) const
+        void assign_centroids(const double* centroids, const double* samples, std::size_t* labels, bool& changed) const
         {
             changed = false;
             std::size_t min_idx;
             double dist, min_dist;
 
             #pragma omp parallel for schedule(static) private(min_idx, dist, min_dist)
-            for (std::size_t s = 0; s<n_samples; s++) {
-                min_dist = euclidean_distance(centroids[0], samples[s]);
+            for (std::size_t s = 0; s<n_samples_; s++) {
+                min_dist = euclidean_distance(centroids, samples+index(s, 0, n_features_), n_features_);
                 min_idx = 0;
 
-                for (std::size_t c{1}; c<n_clusters; c++) {
-                    dist = euclidean_distance(centroids[c], samples[s]);
+                for (std::size_t c{1}; c<n_clusters_; c++) {
+                    dist = euclidean_distance(centroids+index(c, 0, n_features_), samples+index(s, 0, n_features_),
+                            n_features_);
 
                     if (dist<min_dist) {
                         min_dist = dist;
@@ -48,30 +51,33 @@ namespace mcc::clustering {
             }
         }
 
-        void compute_centroids(const double (& samples)[n_samples][n_features], const std::size_t (& labels)[n_samples],
-                double (& centroids)[n_clusters][n_features])
+        void compute_centroids(const double* samples, const std::size_t* labels, double* centroids)
         {
             // initialize to zero
-            const int n_threads{omp_get_max_threads()};
-            double sums[n_threads][n_clusters][n_features] = {0};
-            double counts[n_threads][n_clusters] = {0};
-            std::size_t c;
+            #pragma omp simd
+            for (int i = 0; i<n_threads_*n_clusters_*n_features_; i++)
+                sums_[i] = 0;
 
-            omp_set_num_threads(n_threads);
+            #pragma omp simd
+            for (int i = 0; i < n_threads_*n_clusters_; i++)
+                counts_[i] = 0;
+
+            std::size_t c;
+            omp_set_num_threads(n_threads_);
 
             #pragma omp parallel private(c)
             {
                 int id = omp_get_thread_num();
 
                 #pragma omp for schedule(static)
-                for (std::size_t s = 0; s<n_samples; s++) {
+                for (std::size_t s = 0; s<n_samples_; s++) {
                     c = labels[s];
 
                     #pragma omp simd
-                    for (std::size_t f = 0; f<n_features; f++)
-                        sums[id][c][f] += samples[s][f];
+                    for (std::size_t f = 0; f<n_features_; f++)
+                        sums_[index(id, c, f, n_clusters_, n_features_)] += samples[index(s, f, n_features_)];
 
-                    counts[id][c] += 1;
+                    counts_[index(id, c, n_clusters_)] += 1;
                 }
             }
 
@@ -79,25 +85,32 @@ namespace mcc::clustering {
             double sum, count;
 
             #pragma omp for schedule(static) private(sum, count) // vyzkoušet s a bez
-            for (c = 0; c<n_clusters; c++) {
-                for (std::size_t f = 0; f<n_features; f++) {
+            for (c = 0; c<n_clusters_; c++) {
+                for (std::size_t f = 0; f<n_features_; f++) {
                     sum = 0;
                     count = 0;
 
                     #pragma omp simd
-                    for (std::size_t id = 0; id<n_threads; id++) {
-                        sum += sums[id][c][f];
-                        count += counts[id][c];
+                    for (std::size_t id = 0; id<n_threads_; id++) {
+                        sum += sums_[index(id, c, f, n_clusters_, n_features_)];
+                        count += counts_[index(id, c, n_clusters_)];
                     }
 
-                    centroids[c][f] = sum/count;
+                    centroids[index(c, f, n_features_)] = sum/count;
                 }
             }
         }
 
     public:
-        void operator()(const double (& samples)[n_samples][n_features], std::size_t (& labels)[n_samples],
-                double (& centroids)[n_clusters][n_features])
+        explicit k_means(size_t n_samples, size_t n_features, size_t n_clusters, size_t n_threads)
+                :n_samples_(n_samples), n_features_(n_features), n_clusters_(n_clusters), n_threads_(n_threads)
+        {
+            assert(n_samples>=n_clusters);
+            sums_ = new double[n_threads*n_clusters*n_features];
+            counts_ = new double[n_threads*n_clusters];
+        }
+
+        void operator()(const double* samples, std::size_t* labels, double* centroids)
         {
             bool changed;
 
