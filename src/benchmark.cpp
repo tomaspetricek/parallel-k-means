@@ -6,18 +6,17 @@
 #include <array.hpp>
 #include <k_means.hpp>
 
-
 template<typename CharType>
 struct num_separator : public std::numpunct<CharType> {
     std::string do_grouping() const override { return "\003"; }
     CharType do_thousands_sep() const override { return ' '; }
 };
 
-int main()
+template<class Precision>
+void benchmark(std::size_t n_samples, std::size_t n_features, std::size_t n_clusters)
 {
-    constexpr std::size_t n_samples{10'000}, n_features{50}, n_clusters{10};
-    double* samples = new double[n_samples*n_features];
-    double* centroids = new double[n_clusters*n_features];
+    auto samples = new Precision[n_samples*n_features];
+    auto centroids = new Precision[n_clusters*n_features];
     std::size_t* expect_labels = new std::size_t[n_samples];
     std::size_t* actual_labels = new std::size_t[n_samples];
 
@@ -31,13 +30,13 @@ int main()
 
     // read
     char delim{','};
-    mcc::read_csv(samples_dir/"samples.csv", delim, samples, n_samples, n_features);
-    mcc::read_csv(samples_dir/"labels.csv", delim, actual_labels, n_samples);
-    mcc::read_csv(samples_dir/"init_centroids.csv", delim, centroids, n_clusters, n_features);
+    mcc::read_csv<Precision>(samples_dir/"samples.csv", delim, samples, n_samples, n_features);
+    mcc::read_csv<std::size_t>(samples_dir/"labels.csv", delim, actual_labels, n_samples);
+    mcc::read_csv<Precision>(samples_dir/"init_centroids.csv", delim, centroids, n_clusters, n_features);
 
     // cluster
     const std::size_t n_threads{static_cast<size_t>(omp_get_max_threads())};
-    mcc::clustering::k_means cluster{n_samples, n_features, n_clusters, n_threads};
+    mcc::clustering::k_means<Precision> cluster{n_samples, n_features, n_clusters, n_threads};
     cluster(samples, expect_labels, centroids);
 
     auto begin = std::chrono::high_resolution_clock::now();
@@ -57,12 +56,34 @@ int main()
               << "centroids: " << std::endl;
 
     mcc::print(centroids, n_clusters, n_features);
-    std::cout << "labels: " << std::endl;
-    mcc::print(expect_labels, n_samples);
 
     delete[] samples;
     delete[] centroids;
     delete[] expect_labels;
     delete[] actual_labels;
+}
+
+struct dimensions {
+    std::size_t n_samples;
+    std::size_t n_features;
+    std::size_t n_clusters;
+};
+
+int main()
+{
+    std::vector<dimensions> dims{
+//            {5'000,   256, 10},
+//            {10'000,  128, 10},
+//            {20'000,  64,  10},
+//            {40'000,  32,  10},
+            {80'000,  16,  10},
+//            {160'000, 8,   10},
+//            {320'000, 4,   10},
+//            {640'000, 2,   10},
+    };
+
+    for (const auto& dim: dims)
+        benchmark<double>(dim.n_samples, dim.n_features, dim.n_clusters);
+
     return EXIT_SUCCESS;
 }
