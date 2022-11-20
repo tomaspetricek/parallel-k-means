@@ -34,12 +34,10 @@ void benchmark(std::size_t n_samples, std::size_t n_features, std::size_t n_clus
     mcc::read_csv<std::size_t>(samples_dir/"labels.csv", delim, actual_labels, n_samples);
     mcc::read_csv<Precision>(samples_dir/"init_centroids.csv", delim, centroids, n_clusters, n_features);
 
-    // cluster
     const std::size_t n_threads{static_cast<size_t>(omp_get_max_threads())};
-    mcc::clustering::k_means<Precision> cluster{n_samples, n_features, n_clusters, n_threads};
-    cluster(samples, expect_labels, centroids);
 
     auto begin = std::chrono::high_resolution_clock::now();
+    mcc::clustering::k_means<Precision> cluster{n_samples, n_features, n_clusters, n_threads};
     cluster(samples, expect_labels, centroids);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin);
@@ -76,10 +74,11 @@ int main()
 //            {10'000,  128, 10},
 //            {20'000,  64,  10},
 //            {40'000,  32,  10},
-            {80'000,  16,  10},
+//            {80'000,  16,  10},
 //            {160'000, 8,   10},
 //            {320'000, 4,   10},
 //            {640'000, 2,   10},
+            {10'000, 50, 10}
     };
 
     for (const auto& dim: dims)
