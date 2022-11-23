@@ -14,23 +14,25 @@
 namespace mcc::clustering {
 
     // inspired: https://towardsdatascience.com/k-means-clustering-algorithm-applications-evaluation-methods-and-drawbacks-aa03e644b48a
+    template<class Precision>
     class k_means {
         std::size_t n_samples_;
         std::size_t n_features_;
         std::size_t n_clusters_;
         std::size_t n_threads_;
-        double* sums_;
-        double* counts_;
+        Precision* sums_;
+        Precision* counts_;
         std::size_t n_iter_{0};
 
     protected:
-        void assign_centroids(const double* centroids, const double* samples, std::size_t* labels, bool& changed) const
+        void
+        assign_centroids(const Precision* centroids, const Precision* samples, std::size_t* labels, bool& changed) const
         {
             changed = false;
             std::size_t min_idx;
-            double dist, min_dist;
+            Precision dist, min_dist;
 
-            #pragma omp parallel for schedule(static) private(min_idx, dist, min_dist)
+#pragma omp parallel for schedule(static) private(min_idx, dist, min_dist)
             for (std::size_t s = 0; s<n_samples_; s++) {
                 min_dist = euclidean_distance(centroids, samples+index(s, 0, n_features_), n_features_);
                 min_idx = 0;
@@ -51,29 +53,29 @@ namespace mcc::clustering {
             }
         }
 
-        void compute_centroids(const double* samples, const std::size_t* labels, double* centroids)
+        void compute_centroids(const Precision* samples, const std::size_t* labels, Precision* centroids)
         {
             // initialize to zero
-            #pragma omp simd
+#pragma omp simd
             for (int i = 0; i<n_threads_*n_clusters_*n_features_; i++)
                 sums_[i] = 0;
 
-            #pragma omp simd
-            for (int i = 0; i < n_threads_*n_clusters_; i++)
+#pragma omp simd
+            for (int i = 0; i<n_threads_*n_clusters_; i++)
                 counts_[i] = 0;
 
             std::size_t c;
             omp_set_num_threads(n_threads_);
 
-            #pragma omp parallel private(c)
+#pragma omp parallel private(c)
             {
                 int id = omp_get_thread_num();
 
-                #pragma omp for schedule(static)
+#pragma omp for schedule(static)
                 for (std::size_t s = 0; s<n_samples_; s++) {
                     c = labels[s];
 
-                    #pragma omp simd
+#pragma omp simd
                     for (std::size_t f = 0; f<n_features_; f++)
                         sums_[index(id, c, f, n_clusters_, n_features_)] += samples[index(s, f, n_features_)];
 
@@ -82,20 +84,20 @@ namespace mcc::clustering {
             }
 
             // mean
-            double sum, count;
+            Precision sum, count;
 
-            #pragma omp for schedule(static) private(sum, count) // vyzkoušet s a bez
+#pragma omp for schedule(static) private(sum, count)
             for (c = 0; c<n_clusters_; c++) {
                 for (std::size_t f = 0; f<n_features_; f++) {
-                    sum = 0;
-                    count = 0;
+                    sum = count = 0;
 
-                    #pragma omp simd
+#pragma omp simd
                     for (std::size_t id = 0; id<n_threads_; id++) {
                         sum += sums_[index(id, c, f, n_clusters_, n_features_)];
                         count += counts_[index(id, c, n_clusters_)];
                     }
 
+                    // if (!sum) throw std::runtime_error("Cluster without samples");
                     centroids[index(c, f, n_features_)] = sum/count;
                 }
             }
@@ -106,11 +108,11 @@ namespace mcc::clustering {
                 :n_samples_(n_samples), n_features_(n_features), n_clusters_(n_clusters), n_threads_(n_threads)
         {
             assert(n_samples>=n_clusters);
-            sums_ = new double[n_threads*n_clusters*n_features];
-            counts_ = new double[n_threads*n_clusters];
+            sums_ = new Precision[n_threads*n_clusters*n_features];
+            counts_ = new Precision[n_threads*n_clusters];
         }
 
-        void operator()(const double* samples, std::size_t* labels, double* centroids)
+        void operator()(const Precision* samples, std::size_t* labels, Precision* centroids)
         {
             bool changed;
 
@@ -129,6 +131,12 @@ namespace mcc::clustering {
         size_t n_iter() const
         {
             return n_iter_;
+        }
+
+        ~k_means()
+        {
+            delete[] sums_;
+            delete[] counts_;
         }
     };
 }

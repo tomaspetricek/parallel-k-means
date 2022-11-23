@@ -29,12 +29,6 @@ namespace mcc {
         return true;
     }
 
-//    template<class Type, std::size_t n_rows, std::size_t n_cols>
-//    inline void copy(const Type (& from)[n_rows][n_cols], Type (& to)[n_rows][n_cols])
-//    {
-//        std::copy(&from[0][0], &from[0][0]+n_rows*n_cols, &to[0][0]);
-//    }
-
     inline std::size_t index(std::size_t r, std::size_t c, std::size_t n_cols)
     {
         return r*n_cols+c;
@@ -46,10 +40,10 @@ namespace mcc {
     }
 
     template<class Type>
-    inline void copy(const Type* from, Type* to, std::size_t n_cols)
+    inline void copy(const Type* from, Type* to, std::size_t n)
     {
-        for (std::size_t c{0}; c<n_cols; c++)
-            to[c] = from[c];
+        for (std::size_t i{0}; i<n; i++)
+            to[i] = from[i];
     }
 
     template<class Type>
@@ -84,6 +78,27 @@ namespace mcc {
         return std::sqrt(sum);
     }
 
+    template<class T>
+    requires std::same_as<T, double>
+    inline double parse(const std::string& data)
+    {
+        return std::stod(data);
+    }
+
+    template<class T>
+    requires std::same_as<T, float>
+    inline T parse(const std::string& data)
+    {
+        return std::stof(data);
+    }
+
+    template<class T>
+    requires std::same_as<T, std::size_t>
+    inline T parse(const std::string& data)
+    {
+        return std::stoul(data);
+    }
+
     template<class Type>
     inline void
     read_csv(const std::filesystem::path& path, char delim, Type* mat, std::size_t n_rows, std::size_t n_cols)
@@ -95,7 +110,7 @@ namespace mcc {
             reader(data, n_cols);
 
             for (std::size_t c{0}; c<n_cols; c++)
-                mat[index(r, c, n_cols)] = std::stod(data[c]);
+                mat[index(r, c, n_cols)] = parse<Type>(data[c]);
         }
 
         delete[] data;
@@ -109,22 +124,25 @@ namespace mcc {
 
         for (std::size_t i{0}; i<n; i++) {
             reader(&data, 1);
-            arr[i] = std::stod(data);
+            arr[i] = parse<Type>(data);
         }
     }
 
-    template<class Type, std::size_t n_rows, std::size_t n_cols>
-    inline void write_csv(const std::filesystem::path& path, char delim, const Type (& mat)[n_rows][n_cols])
+    template<class Type>
+    inline void
+    write_csv(const std::filesystem::path& path, char delim, const Type* mat, std::size_t n_rows, std::size_t n_cols)
     {
         mcc::csv::writer writer{path, delim};
-        std::string data[n_cols];
+        auto data = new std::string[n_cols];
 
         for (std::size_t r{0}; r<n_rows; r++) {
             for (std::size_t c{0}; c<n_cols; c++)
-                data[c] = std::to_string(mat[r][c]);
+                data[c] = std::to_string(mat[index(r, c, n_cols)]);
 
-            writer(data);
+            writer(data, n_cols);
         }
+
+        delete[] data;
     }
 }
 

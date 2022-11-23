@@ -24,8 +24,7 @@ namespace mcc::csv {
                 throw std::runtime_error("Cannot open "+path.string());
         }
 
-        template<std::size_t n>
-        void operator()(const std::string (& data)[n])
+        void operator()(const std::string* data, std::size_t n)
         {
             char sep;
             for (int i{0}; i<n; i++) {

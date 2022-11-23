@@ -50,10 +50,7 @@ void benchmark(std::size_t n_samples, std::size_t n_features, std::size_t n_clus
               << "n features: " << n_features << std::endl
               << "n clusters: " << n_clusters << std::endl
               << "n iterations: " << cluster.n_iter() << std::endl
-              << "duration: " << duration.count() << " ns" << std::endl
-              << "centroids: " << std::endl;
-
-    mcc::print(centroids, n_clusters, n_features);
+              << "duration: " << duration.count() << " ns" << std::endl << std::endl;
 
     delete[] samples;
     delete[] centroids;
@@ -70,15 +67,14 @@ struct dimensions {
 int main()
 {
     std::vector<dimensions> dims{
-//            {5'000,   256, 10},
-//            {10'000,  128, 10},
-//            {20'000,  64,  10},
-//            {40'000,  32,  10},
-//            {80'000,  16,  10},
-//            {160'000, 8,   10},
-//            {320'000, 4,   10},
-//            {640'000, 2,   10},
-            {10'000, 50, 10}
+            {5'000,   256, 10},
+            {10'000,  128, 10},
+            {20'000,  64,  10},
+            {40'000,  32,  10},
+            {80'000,  16,  10},
+            {160'000, 8,   10},
+            {320'000, 4,   10},
+            {640'000, 2,   10},
     };
 
     for (const auto& dim: dims)
