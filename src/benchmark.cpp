@@ -38,7 +38,7 @@ void benchmark(std::size_t n_samples, std::size_t n_features, std::size_t n_clus
 
     auto begin = std::chrono::high_resolution_clock::now();
     mcc::clustering::k_means<Precision> cluster{n_samples, n_features, n_clusters, n_threads};
-    cluster(samples, expect_labels, centroids);
+    cluster(samples, centroids, expect_labels, centroids);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-begin);
 
