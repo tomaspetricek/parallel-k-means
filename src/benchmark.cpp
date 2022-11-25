@@ -50,7 +50,8 @@ void benchmark(std::size_t n_samples, std::size_t n_features, std::size_t n_clus
               << "n features: " << n_features << std::endl
               << "n clusters: " << n_clusters << std::endl
               << "n iterations: " << cluster.n_iter() << std::endl
-              << "duration: " << duration.count() << " ns" << std::endl << std::endl;
+              << "duration: " << duration.count() << " ns" << std::endl
+              << "mean iteration duration: " << duration.count()/cluster.n_iter() << " ns" << std::endl << std::endl;
 
     delete[] samples;
     delete[] centroids;
