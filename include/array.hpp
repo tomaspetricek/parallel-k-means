@@ -79,24 +79,17 @@ namespace mcc {
     }
 
     template<class T>
-    requires std::same_as<T, double>
-    inline double parse(const std::string& data)
-    {
-        return std::stod(data);
-    }
-
-    template<class T>
-    requires std::same_as<T, float>
     inline T parse(const std::string& data)
     {
-        return std::stof(data);
-    }
-
-    template<class T>
-    requires std::same_as<T, std::size_t>
-    inline T parse(const std::string& data)
-    {
-        return std::stoul(data);
+        if constexpr (std::is_same<T, std::size_t>::value) {
+            return std::stoul(data);
+        }
+        else if constexpr (std::is_same<T, float>::value) {
+            return std::stof(data);
+        }
+        else if constexpr (std::is_same<T, double>::value) {
+            return std::stod(data);
+        }
     }
 
     template<class Type>
