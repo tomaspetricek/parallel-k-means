@@ -44,12 +44,13 @@ void benchmark(std::size_t n_samples, std::size_t n_features, std::size_t n_clus
     // use custom number separator
     std::cout.imbue(std::locale(std::cout.getloc(), new num_separator<char>()));
 
-    std::cout << "n samples: " << n_samples << std::endl
-              << "n features: " << n_features << std::endl
-              << "n clusters: " << n_clusters << std::endl
-              << "n iterations: " << cluster.n_iter() << std::endl
-              << "duration: " << duration.count() << " ns" << std::endl
-              << "mean iteration duration: " << duration.count()/cluster.n_iter() << " ns" << std::endl << std::endl;
+    std::cout << "n samples: " << n_samples << ", "
+              << "n features: " << n_features << ", "
+              << "n clusters: " << n_clusters << ", "
+              << "n threads: " << n_threads << ", "
+//              << "n iterations: " << cluster.n_iter() << std::endl
+              << "duration: " << duration.count() << " ns" << std::endl;
+//              << "mean iteration duration: " << duration.count()/cluster.n_iter() << " ns" << std::endl << std::endl;
 
     delete[] samples;
     delete[] centroids;
@@ -65,20 +66,22 @@ struct dimensions {
 
 int main()
 {
-    const std::size_t n_threads{static_cast<size_t>(omp_get_max_threads())};
     std::vector<dimensions> dims{
-            {640'000, 2,   10},
-            {320'000, 4,   10},
-            {160'000, 8,   10},
-            {80'000,  16,  10},
-            {40'000,  32,  10},
-            {20'000,  64,  10},
-            {10'000,  128, 10},
-            {5'000,   256, 10},
+//            {640'000, 2,   10},
+//            {320'000, 4,   10},
+//            {160'000, 8,   10},
+//            {80'000,  16,  10},
+            {40'000, 32, 10},
+//            {20'000,  64,  10},
+//            {10'000,  128, 10},
+//            {5'000,   256, 10},
     };
 
+    std::vector<std::size_t> thread_counts{1, 2, 4, 6, 8, 12, 16, 20};
+
     for (const auto& dim: dims)
-        benchmark<double>(dim.n_samples, dim.n_features, dim.n_clusters, n_threads);
+        for (const auto& n_threads: thread_counts)
+            benchmark<double>(dim.n_samples, dim.n_features, dim.n_clusters, n_threads);
 
     return EXIT_SUCCESS;
 }

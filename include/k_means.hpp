@@ -32,7 +32,7 @@ namespace mcc::clustering {
             std::size_t min_idx;
             Precision dist, min_dist;
 
-#pragma omp parallel for schedule(static) private(min_idx, dist, min_dist)
+            #pragma omp parallel for schedule(static) private(min_idx, dist, min_dist) num_threads(n_threads_)
             for (std::size_t s = 0; s<n_samples_; s++) {
                 min_dist = euclidean_distance(centroids, samples+index(s, 0, n_features_), n_features_);
                 min_idx = 0;
@@ -56,26 +56,25 @@ namespace mcc::clustering {
         void compute_centroids(const Precision* samples, const std::size_t* labels, Precision* centroids)
         {
             // initialize to zero
-#pragma omp simd
+            #pragma omp simd
             for (int i = 0; i<n_threads_*n_clusters_*n_features_; i++)
                 sums_[i] = 0;
 
-#pragma omp simd
+            #pragma omp simd
             for (int i = 0; i<n_threads_*n_clusters_; i++)
                 counts_[i] = 0;
 
             std::size_t c;
-            omp_set_num_threads(n_threads_);
 
-#pragma omp parallel private(c)
+            #pragma omp parallel private(c) num_threads(n_threads_)
             {
                 int id = omp_get_thread_num();
 
-#pragma omp for schedule(static)
+                #pragma omp for schedule(static)
                 for (std::size_t s = 0; s<n_samples_; s++) {
                     c = labels[s];
 
-#pragma omp simd
+                    #pragma omp simd
                     for (std::size_t f = 0; f<n_features_; f++)
                         sums_[index(id, c, f, n_clusters_, n_features_)] += samples[index(s, f, n_features_)];
 
@@ -86,12 +85,11 @@ namespace mcc::clustering {
             // mean
             Precision sum, count;
 
-#pragma omp for schedule(static) private(sum, count)
             for (c = 0; c<n_clusters_; c++) {
                 for (std::size_t f = 0; f<n_features_; f++) {
                     sum = count = 0;
 
-#pragma omp simd
+                    #pragma omp simd
                     for (std::size_t id = 0; id<n_threads_; id++) {
                         sum += sums_[index(id, c, f, n_clusters_, n_features_)];
                         count += counts_[index(id, c, n_clusters_)];
@@ -112,12 +110,12 @@ namespace mcc::clustering {
             counts_ = new Precision[n_threads*n_clusters];
         }
 
-        void operator()(const Precision* samples, std::size_t* labels, Precision* centroids)
+        void operator()(const Precision* samples, Precision* init_centroids, std::size_t* labels, Precision* centroids)
         {
             bool changed;
 
             // assign initial centroids
-            assign_centroids(centroids, samples, labels, changed);
+            assign_centroids(init_centroids, samples, labels, changed);
 
             // fit
             do {
